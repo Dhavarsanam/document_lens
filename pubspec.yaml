@@ -1,0 +1,130 @@
+name: document_lens
+description: DOCMIND - Intelligent Document Processing System (OCR)
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # OCR
+  # ML Kit -> Latin / Chinese / Japanese / Korean / Devanagari (on-device)
+  # ✅ Bumped from 0.13.0 -> 0.15.1: fixes a known native crash when
+  # switching languages quickly (creating a new TextRecognizer before the
+  # previous one fully closes could crash the whole app on some devices).
+  google_mlkit_text_recognition: ^0.15.1
+  google_mlkit_translation: ^0.13.0
+
+  # ✅ Tamil OCR — ML Kit on-device does NOT support Tamil script at all,
+  # so Tamil is routed through Tesseract (offline, on-device) instead.
+  # Uses assets/tessdata/tam.traineddata + eng.traineddata (fast variant).
+  flutter_tesseract_ocr: ^0.4.25
+
+  # ✅ Firebase backend — Auth + Firestore (documents/text metadata only).
+  # Storage skipped (needs paid Blaze plan) — scanned images stay local
+  # on-device, only text/metadata syncs across devices.
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+
+  # Image Picker
+  image_picker: ^1.0.7
+
+  # State Management
+  provider: ^6.1.2
+
+  # PDF Generation
+  pdf: ^3.10.8
+  printing: ^5.12.0
+
+  # File saving
+  path_provider: ^2.1.3
+  path: ^1.9.0
+  share_plus: ^12.0.2
+
+  # Local DB
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # UUID
+  uuid: ^4.3.3
+
+  # Password Hashing
+  crypto: ^3.0.3
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # Charts
+  fl_chart: ^0.68.0
+
+  # Biometric
+  local_auth: ^2.2.0
+
+  # PDF Import
+  file_picker: ^8.0.3
+
+  # ✅ Groq cloud OCR (optional, used when the person sets an API key in
+  # Settings) — a real vision-language model that understands the target
+  # language, unlike ML Kit's script-only on-device recognizers.
+  http: ^1.2.2
+
+  # Calendar Events (cross-platform via Google Calendar URL)
+  url_launcher: ^6.3.1
+
+  # Camera Stabilizer
+  # ✅ Bumped to CameraX-based implementation (0.11+) — fixes native crashes
+  # on newer/OEM Android devices (e.g. Android 15/16, Samsung One UI) that
+  # the old camera_android (Camera2 legacy) implementation had.
+  camera: ^0.11.0+2
+  sensors_plus: ^5.0.1
+
+  # Document Reminder
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
+
+  # ✅ Image Enhancement - NEW
+  image: ^4.1.7
+
+  # UI
+  lottie: ^3.1.0
+  flutter_spinkit: ^5.2.1
+  iconsax: ^0.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.9
+  flutter_lints: ^3.0.0
+
+# ✅ flutter_tesseract_ocr pulls in tesseract_ocr as a transitive dependency,
+# which auto-resolves to the LATEST version (0.5.0). That release shipped
+# a broken android module — it declares the same TesseractOcrPlugin class
+# in BOTH a .kt file and a .java file, so Kotlin compilation fails with
+# "Redeclaration". Pinning to 0.4.1 (the last stable release before this
+# regression) avoids the clash. Remove this override once upstream fixes
+# 0.5.0/publishes a corrected version.
+dependency_overrides:
+  tesseract_ocr: 0.4.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/animations/
+    - assets/tessdata/
+    - assets/tessdata_config.json
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
