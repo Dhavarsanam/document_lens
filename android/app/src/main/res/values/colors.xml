@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches AppTheme.primaryBlue (0xFF1A73E8) so the adaptive icon
+         background matches the app's own brand color. -->
+    <color name="ic_launcher_background">#1A73E8</color>
+</resources>

@@ -45,10 +45,12 @@ class _CameraStabilizerScreenState
   // shot genuinely can't sharpen, e.g. very close-up subjects).
   bool _retriedForBlur = false;
 
-  // ✅ Same idea, for the NEW obstruction check: a finger/object covering
-  // part of the document can produce a perfectly sharp photo, so blur
-  // detection alone lets it through. Only auto-retake ONCE per attempt.
-  bool _retriedForObstruction = false;
+  // ✅ Same idea, for the obstruction/frame check: a finger/object covering
+  // the document, or anything else visible in frame besides the document,
+  // can produce a perfectly sharp photo, so blur detection alone lets it
+  // through. Unlike blur (a transient focus/shutter issue), this is never
+  // given a free pass — every attempt is re-checked and blocked until the
+  // frame is clean, so an obstructed shot is never silently accepted.
 
   // Animation
   late AnimationController _pulseController;
@@ -253,13 +255,16 @@ class _CameraStabilizerScreenState
       _retriedForBlur = false;
 
       // ✅ Check whether a finger/hand/object is covering part of the
-      // document — a sharp, well-lit photo can still fail this if a
-      // thumb is holding the page down over the text.
+      // document, or whether anything other than the document is visible
+      // anywhere else in the frame — a sharp, well-lit photo can still
+      // fail this if a thumb is holding the page down, or a hand/object/
+      // cluttered background is sitting next to it. This check is never
+      // bypassed: every attempt is re-checked, and a flagged photo is
+      // NEVER handed off to OCR, no matter how many retakes it takes.
       final obstruction =
       await ObstructionCheckerService.checkObstruction(File(image.path));
 
-      if (obstruction.hasObstruction && !_retriedForObstruction) {
-        _retriedForObstruction = true;
+      if (obstruction.hasObstruction) {
         if (mounted) {
           setState(() => _isCapturing = false);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -277,7 +282,6 @@ class _CameraStabilizerScreenState
         }
         return;
       }
-      _retriedForObstruction = false;
 
       if (mounted) {
         final ocrProvider = context.read<OcrProvider>();
@@ -750,8 +754,10 @@ class _CameraStabilizerScreenState
               '• Use both hands to hold phone\n'
               '• Place document on flat surface\n'
               '• Good lighting gives better results\n'
-              '• Keep fingers off the document — the app warns and '
-              'retakes automatically if something is covering it',
+              '• Keep only the document in frame — the app blocks the '
+              'photo automatically if a finger, hand, or anything else '
+              'is covering the document or visible around it, and keeps '
+              'asking for a retake until the frame is clean',
         ),
         actions: [
           TextButton(

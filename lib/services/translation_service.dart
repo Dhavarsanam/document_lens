@@ -50,6 +50,21 @@ class TranslationService {
   /// 'tamil', 'english'). Throws [UnsupportedError] if either side has
   /// no ML Kit translation model. Returns [text] unchanged if source and
   /// target are the same language.
+  ///
+  /// ✅ FIX: previously sent the ENTIRE extracted text to
+  /// `translator.translateText()` in one call. ML Kit's on-device
+  /// translation model has a practical per-call length limit — for a
+  /// short test sentence that's invisible, but for a real scanned page
+  /// (a paragraph or more of OCR text) only the portion up to that limit
+  /// actually got translated; the rest silently passed through
+  /// unchanged, which is exactly "some words never convert" for longer
+  /// documents. Now the text is chunked into safe-sized pieces (by line,
+  /// staying under [_maxChunkChars]) and each chunk is translated
+  /// separately with the same translator instance, then rejoined — so
+  /// every line in the document actually gets translated, not just the
+  /// first chunk.
+  static const int _maxChunkChars = 500;
+
   static Future<String> translateText({
     required String text,
     required String sourceLanguageCode,
@@ -87,13 +102,50 @@ class TranslationService {
       targetLanguage: targetLang,
     );
     try {
-      return await translator.translateText(text);
+      final chunks = _splitIntoChunks(text);
+      final translatedChunks = <String>[];
+      for (final chunk in chunks) {
+        // Blank/whitespace-only chunks would just come back empty (or
+        // sometimes error) from the translator — keep them as-is to
+        // preserve the document's original spacing.
+        if (chunk.trim().isEmpty) {
+          translatedChunks.add(chunk);
+          continue;
+        }
+        translatedChunks.add(await translator.translateText(chunk));
+      }
+      return translatedChunks.join('\n');
     } catch (e) {
       debugPrint('Translation failed: $e');
       rethrow;
     } finally {
       await translator.close();
     }
+  }
+
+  /// Splits [text] into line-preserving chunks no longer than
+  /// [_maxChunkChars] each, so every chunk stays safely inside the
+  /// on-device translator's practical per-call length limit. Lines are
+  /// never split mid-line — only grouped — so words are never cut in
+  /// half across a chunk boundary.
+  static List<String> _splitIntoChunks(String text) {
+    final lines = text.split('\n');
+    final chunks = <String>[];
+    final buffer = StringBuffer();
+
+    for (final line in lines) {
+      final wouldBeLength =
+          buffer.length + (buffer.isEmpty ? 0 : 1) + line.length;
+      if (buffer.isNotEmpty && wouldBeLength > _maxChunkChars) {
+        chunks.add(buffer.toString());
+        buffer.clear();
+      }
+      if (buffer.isNotEmpty) buffer.write('\n');
+      buffer.write(line);
+    }
+    if (buffer.isNotEmpty) chunks.add(buffer.toString());
+
+    return chunks.isEmpty ? [text] : chunks;
   }
 
   /// Kept for anything still calling the old Tamil-only API — just a

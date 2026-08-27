@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:document_lens/providers/auth_provider.dart';
 import 'package:document_lens/core/theme/app_theme.dart';
@@ -121,6 +122,14 @@ class _RegisterScreenState extends State<RegisterScreen>
                   TextFormField(
                     controller: _nameController,
                     style: const TextStyle(color: Colors.white),
+                    // ✅ Only letters, spaces, apostrophes, and hyphens are
+                    // allowed — blocks digits (and any other symbol) from
+                    // being typed into the name field at all.
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r"[a-zA-Z\s'-]"),
+                      ),
+                    ],
                     decoration: _inputDecoration(
                       hint: 'Enter your full name',
                       icon: Icons.person_outline_rounded,
@@ -128,6 +137,12 @@ class _RegisterScreenState extends State<RegisterScreen>
                     validator: (val) {
                       if (val == null || val.isEmpty) {
                         return 'Name is required';
+                      }
+                      // ✅ Belt-and-suspenders: also catches numbers that
+                      // reach the controller via paste/autofill, which
+                      // inputFormatters alone won't block.
+                      if (RegExp(r'[0-9]').hasMatch(val)) {
+                        return 'Name should contain only letters';
                       }
                       return null;
                     },
@@ -166,8 +181,17 @@ class _RegisterScreenState extends State<RegisterScreen>
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     style: const TextStyle(color: Colors.white),
+                    // ✅ Physically stops the keyboard from entering more
+                    // than 6 characters at all (also hides the little
+                    // counter Flutter shows by default under the field).
+                    maxLength: 6,
+                    buildCounter: (context,
+                        {required currentLength,
+                          required isFocused,
+                          maxLength}) =>
+                    null,
                     decoration: _inputDecoration(
-                      hint: 'Min 6 characters',
+                      hint: 'Exactly 6 characters',
                       icon: Icons.lock_outline_rounded,
                     ).copyWith(
                       suffixIcon: IconButton(
@@ -185,8 +209,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                       if (val == null || val.isEmpty) {
                         return 'Password is required';
                       }
-                      if (val.length < 6) {
-                        return 'Minimum 6 characters';
+                      // ✅ Exactly 6, not "6 or more" — maxLength above
+                      // blocks typing past 6, but this still catches
+                      // shorter entries and anything pasted in.
+                      if (val.length != 6) {
+                        return 'Password must be exactly 6 characters';
                       }
                       return null;
                     },

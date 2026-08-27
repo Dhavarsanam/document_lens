@@ -389,12 +389,16 @@ class _EdgeDetectionScreenState extends State<EdgeDetectionScreen>
                     },
                   ),
 
-                // Status badge
+                // Status badge (IgnorePointer so it doesn't swallow drag
+                // gestures meant for the top-left/top-right corner handles
+                // sitting underneath it)
                 Positioned(
                   top: 16,
                   left: 16,
                   right: 16,
-                  child: _buildStatusBadge(),
+                  child: IgnorePointer(
+                    child: _buildStatusBadge(),
+                  ),
                 ),
               ],
             ),
